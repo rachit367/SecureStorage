@@ -1,0 +1,13 @@
+node_modules/
+.env
+frontend/dist/
+
+frontend/node_modules/
+frontend/.env
+
+
+backend/node_modules/
+backend/.env
+
+mongodb.txt
+client_secret_oauth.json
