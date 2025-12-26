@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 
-const callbackURL = "/api/auth/google/callback";
+const callbackURL =
+  process.env.GOOGLE_CALLBACK_URL ||
+  "https://securestorage.onrender.com/api/auth/google/callback";
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
