@@ -1,18 +1,21 @@
 const express = require('express');
-const router = express.Router(); // ✅ THIS WAS MISSING
+const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
 const cardModel = require('../models/card-model');
 const { v4: uuidv4 } = require('uuid');
-const streamifier = require('streamifier');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
 
-// Configure multer to use memory storage (for Cloudinary)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+// Disk storage — writes temp file to OS temp dir instead of RAM
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
 });
+
+// No fileSize limit — accepts any file size and type
+const upload = multer({ storage });
 
 router.post('/', upload.single('file'), async function (req, res) {
   try {
@@ -23,22 +26,20 @@ router.post('/', upload.single('file'), async function (req, res) {
     const userId = req.user.userId;
     const file = req.file;
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `securestorage/${userId}`,
-          public_id: uuidv4(),
-          resource_type: 'raw', // ✅ force download-safe upload
-          overwrite: false
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
-    });
+    let uploadResult;
+    try {
+      // upload_large handles chunked uploads automatically for large files
+      uploadResult = await cloudinary.uploader.upload_large(file.path, {
+        resource_type: 'raw',
+        public_id: `securestorage/${userId}/${uuidv4()}`,
+        chunk_size: 100 * 1024 * 1024, // 100 MB chunks
+        use_filename: false,
+        overwrite: false
+      });
+    } finally {
+      // Always clean up temp file regardless of upload success/failure
+      fs.unlink(file.path, () => {});
+    }
 
     const downloadUrl = uploadResult.secure_url.replace(
       '/upload/',

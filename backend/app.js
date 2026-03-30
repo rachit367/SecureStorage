@@ -69,9 +69,12 @@ if (process.env.NODE_ENV === 'production') {
 
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     if (process.env.NODE_ENV === 'production') {
       console.log(`Frontend served from: ${path.join(__dirname, '../frontend/dist')}`);
     }
 });
+
+// Allow up to 10 minutes for large file uploads
+server.setTimeout(10 * 60 * 1000);
