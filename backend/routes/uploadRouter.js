@@ -41,6 +41,10 @@ router.post('/', upload.single('file'), async function (req, res) {
       fs.unlink(file.path, () => {});
     }
 
+    if (!uploadResult || !uploadResult.secure_url) {
+      throw new Error('Cloudinary upload failed: no secure_url returned');
+    }
+
     const downloadUrl = uploadResult.secure_url.replace(
       '/upload/',
       '/upload/fl_attachment/'
